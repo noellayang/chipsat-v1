@@ -1,6 +1,6 @@
-# ChipSat (v1), a Solar-Powered CubeSat Power Testbed
+# ChipSat v1: Solar-Powered CubeSat Power Testbed
 
-A custom 45mm x 45mm PCB built to test how firmware power-management decisions actually change the electrical behavior of a small-satellite-style system. Built as a testbed for the Duke Solar Sail project's power budget work.
+ChipSat v1 is a custom 45mm x 45mm PCB I built to test how firmware power-management decisions affect the actual current draw of a small satellite-style system. It was developed alongside my power budget work for the Duke Solar Sail project.
 
 <p align="center">
   <img src="images/board_photo.jpg" width="500" alt="Assembled ChipSat v1 board, 45mm x 45mm">
@@ -8,49 +8,73 @@ A custom 45mm x 45mm PCB built to test how firmware power-management decisions a
 
 ## What this is
 
-Rather than trying to reproduce actual flight hardware, this board answers a narrower question: given the same physical system (solar input, battery charging, sensors, radio), how much does the current draw change just from firmware scheduling decisions? The board integrates:
+The goal was not to reproduce flight hardware exactly. Instead, I wanted a physical testbed where I could keep the hardware fixed and measure how much the power draw changed as I switched between different firmware schedules.
 
-- **ESP32-C3-MINI-1** MCU with native USB
-- **Solar input + Li-ion charging** (BQ25185)
-- **Two INA219 current/voltage monitors,** one on the solar input path, one on the system rail
-- **ICM-42688-P** 6-axis IMU (SPI)
-- **VEML7700** ambient light sensor
-- **Switchable +3V3_SENS rail** for the sensor domain
-- **36 Ω switched load** behind a solder jumper to emulate a ~300 mW ADCS-scale event (comparable to a single magnetorquer actuation)
-- BLE (via the ESP32-C3's radio) as a telemetry stand-in for LoRa downlink, with the same 780 ms TX window and cadence, without trying to match LoRa's RF characteristics
+The board includes:
+
+* ESP32-C3-MINI-1 MCU with native USB
+* Solar input and Li-ion charging using the BQ25185
+* Two INA219 current and voltage monitors: one on the solar input and one on the main system rail
+* ICM-42688-P 6-axis IMU over SPI
+* VEML7700 ambient light sensor
+* Switchable `+3V3_SENS` rail for the sensor domain
+* 36Ω switched load behind a solder jumper to emulate an approximately 300mW ADCS load, comparable to a single magnetorquer actuation
+* BLE telemetry using the ESP32-C3 radio as a stand-in for LoRa downlink. I kept the same 780ms transmission window and cadence used in the mission power model, without attempting to reproduce LoRa RF behavior
 
 ## Repo layout
 
-```
-hardware/         KiCad project (schematic, PCB layout, design rules)
-manufacturing/    Gerbers, drill files, pick-and-place, fab-house zip outputs
-images/           Board photo, result figures
+```text
+hardware/         KiCad project: schematic, PCB layout, design rules
+manufacturing/    Gerbers, drill files, pick-and-place, fab submission files
+images/           Board photos and test figures
 docs/             BOM
 ```
 
 ## Firmware power states
 
-| State | MCU | IMU | +3V3_SENS | BLE proxy | Mission interpretation |
-|---|---|---|---|---|---|
-| Eclipse sleep | Deep sleep between events | Off | Off | Wake every 30 s, advertise 0.78 s | EARTH-SHADOW stress case, nominal telemetry retained |
-| Housekeeping | Active | Off | Off | 0.78 s every 30 s | Autonomous scheduling / health checks |
-| Full sensing | Active | On | On | 0.78 s every 30 s | Complete sensing window |
+| State         | MCU                       | IMU | +3V3_SENS | BLE proxy                           | Mission interpretation                                   |
+| ------------- | ------------------------- | --- | --------- | ----------------------------------- | -------------------------------------------------------- |
+| Eclipse sleep | Deep sleep between events | Off | Off       | Wake every 30s, advertise for 0.78s | Earth-shadow stress case with nominal telemetry retained |
+| Housekeeping  | Active                    | Off | Off       | 0.78s every 30s                     | Scheduling and health checks                             |
+| Full sensing  | Active                    | On  | On        | 0.78s every 30s                     | Complete sensing window                                  |
 
 ## Results
 
-**Deep sleep cuts average current by 95.4%.** Running each state over a representative 30 s cycle: Eclipse averaged 2.25 mA, Housekeeping 48.59 ± 0.10 mA, Full Sensing 50.14 ± 0.11 mA. A separate switched-load test (the 36 Ω / ~300 mW ADCS emulation) showed current rising from 26.02 mA at baseline to 118.48 ± 0.87 mA with the load on, which is close to the 300 mW resistive-load prediction.
+### Power-state testing
+
+Deep sleep reduced average current by 95.4%.
+
+Each state was run over a representative 30s cycle:
+
+* Eclipse sleep: 2.25mA
+* Housekeeping: 48.59 ± 0.10mA
+* Full sensing: 50.14 ± 0.11mA
+
+I also tested the switched 36Ω load used to emulate an ADCS event. System current increased from a 26.02mA baseline to 118.48 ± 0.87mA with the load enabled, close to the expected result for an approximately 300mW resistive load.
 
 <p align="center">
   <img src="images/power_states.png" width="700" alt="System current across power states and switched-load test">
 </p>
 
-**BLE telemetry is short but not free.** With the board held in Full Sensing for 60 s and BLE advertising enabled for 780 ms every 30 s, baseline current stayed tight at 53.67 ± 0.10 mA across three trials, with brief spikes up to 121.5 mA (INA219-observed) during the TX windows. Radio activity works out to about a 2.6% duty cycle and shows up as a short burst on top of a stable baseline rather than dominating the whole cycle.
+### BLE telemetry
+
+I held the board in Full Sensing for 60s and enabled BLE advertising for 780ms every 30s.
+
+Across three trials, the baseline stayed at 53.67 ± 0.10mA. During the advertising windows, the INA219 measured short peaks up to 121.5mA.
+
+At this cadence, the radio is active for roughly 2.6% of the cycle. The test helped confirm that the BLE event appears as a short current spike rather than setting the power draw for the full operating period.
 
 <p align="center">
   <img src="images/ble_telemetry.png" width="700" alt="System current during periodic BLE telemetry">
 </p>
 
-**Solar input scales with light as expected.** Using the solar-side INA219 alongside the VEML7700 for illuminance, harvested power rose from about 3.01 ± 0.68 mW at ~1669 lux to 16.77 ± 0.91 mW at ~2669 lux. The lowest-light point sits close to the INA219 / 0.1 Ω shunt's measurement floor, so that point is noisier by nature rather than a sign the panel stopped producing.
+### Solar harvesting
+
+I used the solar-side INA219 together with the VEML7700 to compare harvested power against measured illuminance.
+
+Harvested power increased from 3.01 ± 0.68mW at about 1669 lux to 16.77 ± 0.91mW at about 2669 lux.
+
+The lowest-light measurement is close to the practical measurement floor of the INA219 with the 0.1Ω shunt, so that point has noticeably more variation than the higher-light measurements.
 
 <p align="center">
   <img src="images/solar_harvesting.png" width="600" alt="Harvested solar power vs illuminance">
@@ -58,27 +82,48 @@ docs/             BOM
 
 ## Bring-up notes
 
-And a few key pointers worth noting:
+A few issues from bring-up ended up being especially useful:
 
-- *I2C bus switching:*
-The ESP32-C3 has one I2C controller but the board uses two physical buses, so firmware remaps the controller between them. Cutting power to the sensor rail mid-transaction was a real failure mode — the fix was finishing the transaction and releasing SDA/SCL before disabling the rail.
-- *Low-current measurement floor:*
-At weak illumination, solar current sat close enough to the INA219 / 0.1 Ω shunt's resolution and offset that the sign could drift around zero. Rather than smoothing that over, the lowest-light point is called out as sitting near the measurement floor.
-- *BLE stack overhead:*
-Just initializing the BLE stack raised the active baseline noticeably, even with advertising off. That made "advertising disabled" and "BLE fully deinitialized" two very different power states worth distinguishing in firmware.
+### I2C bus switching
+
+The ESP32-C3 only has one I2C controller, while the board uses two physical I2C buses. Firmware therefore remaps the controller depending on which bus is being accessed.
+
+One issue appeared when I disabled the sensor rail before an I2C transaction had fully completed. This could leave SDA or SCL in the wrong state and break later communication. I fixed it by completing the transaction and releasing the bus before switching off `+3V3_SENS`.
+
+### Low-current measurement floor
+
+Under weak illumination, the solar current became small enough that the INA219 and 0.1Ω shunt were operating near their useful measurement limit. At that point, offset and resolution were large enough for the reported current to occasionally drift around zero.
+
+I kept the data rather than filtering it out, but marked the lowest-light point as being close to the measurement floor.
+
+### BLE stack overhead
+
+One result I did not initially expect was the cost of simply initializing BLE.
+
+Even with advertising disabled, bringing up the BLE stack raised the active current noticeably. Because of this, "advertising off" and "BLE fully deinitialized" are separate power states in the firmware rather than being treated as equivalent.
 
 ## Manufacturing
 
-Gerbers, drill files, and the original fab submission archives for the 2-layer board are in [`manufacturing/`](manufacturing/). The KiCad project is the source of truth. Regenerate fab outputs from `hardware/chipsat_v1.kicad_pcb` if you need a different fab house's format.
+Gerbers, drill files, and the original fab submission files for the 2-layer PCB are included in [`manufacturing/`](manufacturing/).
+
+The KiCad project is the source of truth. If you need outputs for a different board house, regenerate them from:
+
+`hardware/chipsat_v1.kicad_pcb`
 
 ## BOM
 
-Full bill of materials with LCSC part numbers is in [`docs/BOM.csv`](docs/BOM.csv).
+The full bill of materials, including LCSC part numbers, is available at [`docs/BOM.csv`](docs/BOM.csv).
 
 ## Opening the project
 
-Requires KiCad 8+. Open `hardware/chipsat_v1.kicad_pro`.
+KiCad 8 or newer is recommended.
+
+Open:
+
+`hardware/chipsat_v1.kicad_pro`
 
 ## License
 
-MIT — see [LICENSE](LICENSE). The hardware design files are included for reference and reuse; a credit back to this repo is appreciated if you build on the board itself.
+MIT. See [LICENSE](LICENSE).
+
+The hardware design files are included for reference and reuse. If you build directly on the board design, credit back to this repo is appreciated.
