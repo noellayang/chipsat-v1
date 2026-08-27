@@ -1,4 +1,4 @@
-# ChipSat v1 — Solar-Powered CubeSat Power Testbed
+# ChipSat (v1), a Solar-Powered CubeSat Power Testbed
 
 A custom 45mm x 45mm PCB built to test how firmware power-management decisions actually change the electrical behavior of a small-satellite-style system. Built as a testbed for the Duke Solar Sail project's power budget work.
 
