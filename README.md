@@ -19,7 +19,7 @@ The board includes:
 * VEML7700 ambient light sensor
 * Switchable `+3V3_SENS` rail for the sensor domain
 * 36Ω switched load behind a solder jumper to emulate an approximately 300mW ADCS load, comparable to a single magnetorquer actuation
-* BLE telemetry using the ESP32-C3 radio as a stand-in for LoRa downlink. I kept the same 780ms transmission window and cadence used in the mission power model, without attempting to reproduce LoRa RF behavior
+* BLE telemetry using the ESP32-C3 radio as a stand-in for LoRa downlink. I kept the same 780ms transmission window and cadence used in the mission power model (and without attempting to reproduce LoRa RF behavior)
 
 ## Repo layout
 
