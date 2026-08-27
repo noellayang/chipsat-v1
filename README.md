@@ -12,7 +12,7 @@ Rather than trying to reproduce actual flight hardware, this board answers a nar
 
 - **ESP32-C3-MINI-1** MCU with native USB
 - **Solar input + Li-ion charging** (BQ25185)
-- **Two INA219 current/voltage monitors** — one on the solar input path, one on the system rail
+- **Two INA219 current/voltage monitors,** one on the solar input path, one on the system rail
 - **ICM-42688-P** 6-axis IMU (SPI)
 - **VEML7700** ambient light sensor
 - **Switchable +3V3_SENS rail** for the sensor domain
@@ -23,8 +23,9 @@ Rather than trying to reproduce actual flight hardware, this board answers a nar
 
 ```
 hardware/         KiCad project (schematic, PCB layout, design rules)
-manufacturing/    Gerbers, drill files, pick-and-place, and fab-house zip outputs
-images/           Board photo + result figures
+manufacturing/    Gerbers, drill files, pick-and-place, fab-house zip outputs
+images/           Board photo, result figures
+docs/             BOM
 ```
 
 ## Firmware power states
@@ -67,7 +68,7 @@ A few things that changed how I thought about the design while bringing it up:
 
 ## Manufacturing
 
-Gerbers, drill files, and the original fab submission archives for the 2-layer board are in [`manufacturing/`](manufacturing/). The KiCad project is the source of truth — regenerate fab outputs from `hardware/chipsat_v1.kicad_pcb` if you need a different fab house's format.
+Gerbers, drill files, and the original fab submission archives for the 2-layer board are in [`manufacturing/`](manufacturing/). The KiCad project is the source of truth. Regenerate fab outputs from `hardware/chipsat_v1.kicad_pcb` if you need a different fab house's format.
 
 ## BOM
 
