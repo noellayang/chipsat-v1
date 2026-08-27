@@ -24,9 +24,6 @@ Rather than trying to reproduce actual flight hardware, this board answers a nar
 ```
 hardware/         KiCad project (schematic, PCB layout, design rules)
 manufacturing/    Gerbers, drill files, pick-and-place, and fab-house zip outputs
-docs/             BOM (CSV) and full test report (PDF)
-test-data/        Raw measurement CSVs behind every number in this README
-analysis/         Script that regenerates the figures below from test-data/
 images/           Board photo + result figures
 ```
 
