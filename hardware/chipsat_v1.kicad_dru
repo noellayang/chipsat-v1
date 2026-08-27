@@ -1,0 +1,7 @@
+(version 1)
+(rule "U7 Min Clearance"
+(condition "A.Parent == 'U7' && B.Parent == 'U7'")
+(constraint clearance (min 0.15mm)))
+(rule "INA219 Internal Clearance"
+(condition "(A.memberOfFootprint('U2') && B.memberOfFootprint('U2')) || (A.memberOfFootprint('U6') && B.memberOfFootprint('U6'))")
+(constraint clearance (min 0.17mm)))
